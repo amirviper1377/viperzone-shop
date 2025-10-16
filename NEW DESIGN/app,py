@@ -1,0 +1,210 @@
+"""
+Single-file Flask app for a small editable website.
+Title: فروش اکانت وارزون
+Theme: Shooter / Game-style (dark, neon accents)
+
+How to use:
+1. Save this file as app.py
+2. Install Flask: pip install flask
+3. Run: flask run --host=127.0.0.1 --port=5000  OR  python app.py
+4. Open http://127.0.0.1:5000 in your browser
+
+Edit the SITE_TITLE variable or CSS inside BASE_CSS to change theme/title/colors.
+"""
+
+from flask import Flask, request, redirect, url_for, render_template_string, abort
+import uuid
+
+app = Flask(__name__)
+
+# ---------- CONFIG: edit these ----------
+SITE_TITLE = "فروش اکانت وارزون"
+SITE_SUBTITLE = "بهترین اکانت‌های وارزون — سریع، امن، مطمئن"
+# Accent colors: change to any hex you like
+ACCENT_COLOR = "#00e6a8"  # neon green
+BG_COLOR = "#0b0f14"      # dark background
+CARD_BG = "#0f1720"
+TEXT_COLOR = "#e6eef6"
+# ----------------------------------------
+
+# Sample in-memory data (replace with DB later)
+accounts = [
+    {
+        "id": str(uuid.uuid4()),
+        "title": "اکانت سطح پرو - Modern Warfare",
+        "platform": "PC",
+        "price": 40,
+        "description": "اکانت با اسلحه‌های نادر و سطح بالا. همراه با تضمین 24 ساعته.",
+    },
+    {
+        "id": str(uuid.uuid4()),
+        "title": "اکانت استاندارد - Warzone Mobile",
+        "platform": "Mobile",
+        "price": 15,
+        "description": "اکانت مناسب شروع، قیمت اقتصادی.",
+    },
+]
+
+# Base CSS (simple shooter-game feeling)
+BASE_CSS = f"""
+:root {{
+  --accent: {ACCENT_COLOR};
+  --bg: {BG_COLOR};
+  --card: {CARD_BG};
+  --text: {TEXT_COLOR};
+}}
+* {{ box-sizing: border-box; }}
+html, body {{ height: 100%; margin: 0; padding: 0; background: radial-gradient(circle at 10% 10%, rgba(0,0,0,0.6), transparent 20%), var(--bg); color: var(--text); font-family: 'Helvetica Neue', Arial, sans-serif; }}
+.container {{ width: 95%; max-width: 1100px; margin: 28px auto; }}
+.header {{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 18px; background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-radius:12px; box-shadow: 0 6px 18px rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.03); }}
+.title {{ font-size:22px; font-weight:700; letter-spacing:0.6px; }}
+.subtitle {{ font-size:13px; opacity:0.8; }}
+.btn {{ background: var(--accent); color: #001116; padding:8px 12px; border-radius:8px; text-decoration:none; font-weight:700; }}
+.grid {{ display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:18px; margin-top:18px; }}
+.card {{ background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00)); padding:14px; border-radius:10px; border:1px solid rgba(255,255,255,0.03); box-shadow: 0 8px 20px rgba(0,0,0,0.6); }}
+.card h3 {{ margin:0 0 6px 0; font-size:16px; }}
+.card .meta {{ font-size:12px; opacity:0.85; margin-bottom:8px; }}
+.card .price {{ font-weight:800; color: var(--accent); font-size:18px; }}
+.form {{ margin-top:18px; padding:12px; background: rgba(255,255,255,0.01); border-radius:10px; }}
+.input, textarea, select {{ width:100%; padding:8px; margin:6px 0 12px 0; border-radius:8px; background:transparent; border:1px solid rgba(255,255,255,0.06); color:var(--text); }}
+.footer {{ margin-top:28px; text-align:center; font-size:13px; opacity:0.7; }}
+.small-muted {{ font-size:12px; opacity:0.7; }}
+"""
+
+# ---------- TEMPLATES (single-file via render_template_string) ----------
+BASE_HTML = """
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ site_title }}</title>
+    <style>{{ css }}</style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <div>
+          <div class="title">{{ site_title }}</div>
+          <div class="subtitle">{{ site_subtitle }}</div>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <a class="btn" href="{{ url_for('index') }}">خانه</a>
+          <a class="btn" href="{{ url_for('add_account') }}">افزودن آگهی</a>
+        </div>
+      </div>
+
+      {% block content %}{% endblock %}
+
+      <div class="footer">
+        <div class="small-muted">این یک نمونه محلی است — برای راه‌اندازی در اینترنت نیاز به سرور و دیتابیس دارید.</div>
+      </div>
+    </div>
+  </body>
+</html>
+"""
+
+INDEX_HTML = """
+{% extends base %}
+{% block content %}
+  <div class="grid">
+    {% for acc in accounts %}
+      <div class="card">
+        <h3>{{ acc.title }}</h3>
+        <div class="meta">پلتفرم: {{ acc.platform }} &nbsp;•&nbsp; شناسه: {{ acc.id[:8] }}</div>
+        <div>{{ acc.description }}</div>
+        <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center;">
+          <div class="price">${{ acc.price }}</div>
+          <div style="display:flex; gap:8px;">
+            <a class="btn" href="{{ url_for('view_account', acc_id=acc.id) }}">مشاهده</a>
+            <form method="POST" action="{{ url_for('delete_account', acc_id=acc.id) }}" style="display:inline;">
+              <button class="btn" type="submit" onclick="return confirm('آیا مطمئن هستید؟');">حذف</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% endblock %}
+"""
+
+VIEW_HTML = """
+{% extends base %}
+{% block content %}
+  <div style="margin-top:18px;">
+    <div class="card">
+      <h3>{{ acc.title }}</h3>
+      <div class="meta">پلتفرم: {{ acc.platform }} &nbsp;•&nbsp; شناسه کامل: {{ acc.id }}</div>
+      <p style="margin-top:12px;">{{ acc.description }}</p>
+      <div style="margin-top:12px;">قیمت: <span class="price">${{ acc.price }}</span></div>
+      <div style="margin-top:12px; display:flex; gap:10px;">
+        <a class="btn" href="{{ url_for('index') }}">بازگشت</a>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+"""
+
+ADD_HTML = """
+{% extends base %}
+{% block content %}
+  <div class="form">
+    <form method="POST" action="{{ url_for('add_account') }}">
+      <label>عنوان آگهی</label>
+      <input class="input" name="title" required />
+
+      <label>پلتفرم</label>
+      <select class="input" name="platform">
+        <option>PC</option>
+        <option>Console</option>
+        <option>Mobile</option>
+      </select>
+
+      <label>قیمت (USD)</label>
+      <input class="input" name="price" type="number" required />
+
+      <label>توضیحات</label>
+      <textarea class="input" name="description" rows="4"></textarea>
+
+      <button class="btn" type="submit">افزودن</button>
+    </form>
+  </div>
+{% endblock %}
+"""
+
+# ---------- ROUTES ----------
+@app.route('/')
+def index():
+    return render_template_string(INDEX_HTML, base=BASE_HTML, site_title=SITE_TITLE, site_subtitle=SITE_SUBTITLE, css=BASE_CSS, accounts=accounts)
+
+@app.route('/account/<acc_id>')
+def view_account(acc_id):
+    acc = next((a for a in accounts if a['id'] == acc_id), None)
+    if not acc:
+        abort(404)
+    return render_template_string(VIEW_HTML, base=BASE_HTML, site_title=SITE_TITLE, site_subtitle=SITE_SUBTITLE, css=BASE_CSS, acc=acc)
+
+@app.route('/add', methods=['GET','POST'])
+def add_account():
+    if request.method == 'POST':
+        data = request.form
+        new = {
+            'id': str(uuid.uuid4()),
+            'title': data.get('title', 'بدون عنوان'),
+            'platform': data.get('platform', 'PC'),
+            'price': float(data.get('price', 0)),
+            'description': data.get('description', ''),
+        }
+        accounts.append(new)
+        return redirect(url_for('index'))
+    return render_template_string(ADD_HTML, base=BASE_HTML, site_title=SITE_TITLE, site_subtitle=SITE_SUBTITLE, css=BASE_CSS)
+
+@app.route('/delete/<acc_id>', methods=['POST'])
+def delete_account(acc_id):
+    global accounts
+    accounts = [a for a in accounts if a['id'] != acc_id]
+    return redirect(url_for('index'))
+
+# Simple debug run when using `python app.py`
+if __name__ == '__main__':
+    app.run(debug=True)

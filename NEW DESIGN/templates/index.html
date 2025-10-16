@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>🎮 فروشگاه وایپر زون</title>
+  <style>
+    :root {
+      --accent: #00ffff;
+      --accent-2: #ff0044;
+      --card-bg: rgba(20, 20, 20, 0.9);
+      --glass: rgba(15, 15, 15, 0.7);
+      --radius: 16px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Vazir", "Tahoma", sans-serif;
+      background:
+        linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.8)),
+        url("{{ url_for('static', filename='images/background.jpg') }}") no-repeat center center/cover;
+      min-height: 100vh;
+      color: #eee;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 22px;
+      background: var(--glass);
+      backdrop-filter: blur(6px);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+      position: sticky;
+      top: 0;
+      z-index: 40;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 26px;
+      color: var(--accent);
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 20px;
+      padding: 20px;
+    }
+
+    /* کارت محصول */
+    .menu {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .card {
+      display: flex;
+      align-items: stretch;
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+      transition: transform .2s ease, box-shadow .2s ease;
+    }
+
+    .card:hover {
+      transform: scale(1.02);
+      box-shadow: 0 12px 30px rgba(0, 255, 255, 0.25);
+    }
+
+    .thumb {
+      flex: 0 0 260px;
+      height: 200px;
+    }
+
+    .thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .card-body {
+      flex: 1;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--accent);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .price {
+      color: var(--accent-2);
+      font-weight: 800;
+    }
+
+    .desc {
+      font-size: 14px;
+      color: #aaa;
+      line-height: 1.6;
+      margin: 10px 0;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn {
+      border: 0;
+      padding: 9px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .btn.add {
+      background: var(--accent);
+      color: #000;
+    }
+
+    .btn.remove {
+      background: #444;
+      color: #fff;
+    }
+
+    /* سبد خرید */
+    .cart {
+      position: sticky;
+      top: 20px;
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+      max-height: 80vh;
+      overflow: auto;
+    }
+
+    .cart h2 {
+      margin: 0 0 6px 0;
+      color: var(--accent);
+    }
+
+    .cart-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .cart-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 8px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 10px;
+    }
+
+    .cart-item img {
+      width: 56px;
+      height: 56px;
+      border-radius: 8px;
+      object-fit: cover;
+    }
+
+    .checkout {
+      margin-top: 12px;
+      width: 100%;
+      padding: 10px;
+      border-radius: 10px;
+      border: 0;
+      background: var(--accent-2);
+      color: white;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    @media (max-width: 900px) {
+      main { grid-template-columns: 1fr; }
+      .card { flex-direction: column; }
+      .thumb { width: 100%; height: 200px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🎮 فروشگاه وایپر زون</h1>
+  </header>
+
+  <main>
+    <section class="menu" id="menu"></section>
+
+    <aside class="cart">
+      <h2>🛒 سبد خرید</h2>
+      <ul class="cart-list" id="cartList"></ul>
+      <div style="text-align:center; margin-top:8px;">جمع کل: <span id="sum">0</span> تومان</div>
+      <button class="checkout" id="checkoutBtn">🧾 پرداخت نهایی</button>
+    </aside>
+  </main>
+
+  <script>
+    const items = [
+      { id:'cheat-cs2', name:'چیت CS2', price:89000, img:"{{ url_for('static', filename='images/image5.jpg') }}", desc:'چیت مخصوص CS2 با کمترین قیمت' },
+      { id:'cheat-csgo', name:'چیت CS:GO', price:60000, img:"{{ url_for('static', filename='images/image10.jpg') }}", desc:'چیت CS:GO با کمترین قیمت' },
+      { id:'warzone', name:'چیت Warzone', price:650000, img:"{{ url_for('static', filename='images/image2.jpg') }}", desc:'چیت تضمینی و آپدیت‌شونده Warzone' },
+      { id:'gta', name:'اکانت GTA V', price:550000, img:"{{ url_for('static', filename='images/image7.jpg') }}", desc:'اکانت Social Club آماده برای FIVEM' },
+      { id:'bo7', name:'چیت BO7', price:89000, img:"{{ url_for('static', filename='images/image8.jpg') }}", desc:'چیت مخصوص BO7 با کمترین قیمت' },
+      { id:'steam', name:'اکانت استیم آماده', price:89000, img:"{{ url_for('static', filename='images/image9.jpg') }}", desc:'اکانت آماده با مشخصات کامل' },
+      { id:'spoofer', name:'اسپوفر آنتی‌بن', price:1800000, img:"{{ url_for('static', filename='images/image6.jpg') }}", desc:'خارج کردن سیستم از بن تضمینی' },
+      { id:'apex', name:'چیت Apex Legends', price:1200000, img:"{{ url_for('static', filename='images/apex.jpg') }}", desc:'چیت Apex Legends با قابلیت اکسترنال' }
+    ];
+
+    let cart = {};
+
+    function renderMenu() {
+      const menuEl = document.getElementById('menu');
+      menuEl.innerHTML = '';
+      items.forEach(it => {
+        const card = document.createElement('article');
+        card.className = 'card';
+        card.innerHTML = `
+          <div class="thumb"><img src="${it.img}" alt="${it.name}"></div>
+          <div class="card-body">
+            <div class="title"><span>${it.name}</span> <span class="price">${it.price.toLocaleString()} تومان</span></div>
+            <div class="desc">${it.desc}</div>
+            <div class="actions">
+              <button class="btn add" data-id="${it.id}">➕ افزودن</button>
+              <button class="btn remove" data-id="${it.id}">➖ حذف</button>
+            </div>
+          </div>`;
+        menuEl.appendChild(card);
+      });
+    }
+
+    document.addEventListener('click', e => {
+      const add = e.target.closest('.btn.add');
+      const rem = e.target.closest('.btn.remove');
+      if (add) addToCart(add.dataset.id);
+      if (rem) removeFromCart(rem.dataset.id);
+    });
+
+    function addToCart(id) {
+      const item = items.find(i => i.id === id);
+      if (!item) return;
+      if (!cart[id]) cart[id] = { item, qty: 1 };
+      else cart[id].qty++;
+      updateCart();
+    }
+
+    function removeFromCart(id) {
+      if (!cart[id]) return;
+      cart[id].qty--;
+      if (cart[id].qty <= 0) delete cart[id];
+      updateCart();
+    }
+
+    function updateCart() {
+      const cartList = document.getElementById('cartList');
+      const sumEl = document.getElementById('sum');
+      cartList.innerHTML = '';
+      let total = 0;
+      Object.values(cart).forEach(c => {
+        const li = document.createElement('li');
+        li.className = 'cart-item';
+        li.innerHTML = `
+          <div style="display:flex;align-items:center;gap:10px">
+            <img src="${c.item.img}" alt="">
+            <div>
+              <div>${c.item.name}</div>
+              <div style="font-size:13px;color:#aaa">${c.item.price.toLocaleString()} تومان</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <button class="btn remove" onclick="removeFromCart('${c.item.id}')">−</button>
+            <span>${c.qty}</span>
+            <button class="btn add" onclick="addToCart('${c.item.id}')">+</button>
+          </div>`;
+        cartList.appendChild(li);
+        total += c.item.price * c.qty;
+      });
+      sumEl.textContent = total.toLocaleString();
+    }
+
+    renderMenu();
+  </script>
+</body>
+</html>

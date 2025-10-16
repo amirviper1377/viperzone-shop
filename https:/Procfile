@@ -1,1 +1,2 @@
-web: gunicorn NEW_DESIGN.app:app
+web: gunicorn 'NEW DESIGN.app:app'
+
